@@ -1,12 +1,11 @@
-function HashMap() {
+module.exports = function HashMap() {
   let capacity = 16; // initial capacity of the hash table
-  let loadFactor = 0.8; // load factor to trigger resizing
+  let loadFactor = 0.75; // load factor to trigger resizing
   let size = 0; // number of stored keys inside hash map
   let buckets = new Array(capacity);
 
   const hash = (key) => {
     let hashCode = 0;
-
     const primeNumber = 31;
     for (let i = 0; i < key.length; i++) {
       hashCode = primeNumber * hashCode + key.charCodeAt(i);
@@ -23,23 +22,27 @@ function HashMap() {
     }
 
     let currentNode = buckets[index];
-    let previousNode = null;
     while (currentNode != null) {
       if (currentNode.key === key) {
         currentNode.value = value;
         return;
       }
-      previousNode = currentNode;
       currentNode = currentNode.next;
     }
     const newNode = Node(key, value);
     if (buckets[index] === null) {
       buckets[index] = newNode;
     } else {
-      previousNode.next = newNode;
+      // prepend to list
+      newNode.next = buckets[index];
+      buckets[index] = newNode;
     }
     size++;
-    // TODO: have to recalculate load factor?
+
+    // check if we need to resize
+    if (size > capacity * loadFactor) {
+      resize();
+    }
   };
 
   const get = (key) => {
@@ -136,6 +139,24 @@ function HashMap() {
     return entries;
   };
 
+  const resize = () => {
+    capacity *= 2;
+    const oldBuckets = buckets;
+    buckets = new Array(capacity);
+
+    // Rehash the entries into the new buckets
+    for (let i = 0; i < oldBuckets.length; i++) {
+      let currentNode = oldBuckets[i];
+      while (currentNode != null) {
+        const newIndex = hash(currentNode.key);
+        const newNode = Node(currentNode.key, currentNode.value);
+        newNode.next = buckets[newIndex];
+        buckets[newIndex] = newNode;
+        currentNode = currentNode.next;
+      }
+    }
+  };
+
   return {
     set,
     get,
@@ -147,7 +168,7 @@ function HashMap() {
     values,
     entries,
   };
-}
+};
 
 function Node(key, value) {
   return { key: key, value: value, next: null };
